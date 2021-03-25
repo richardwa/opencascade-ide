@@ -4,7 +4,6 @@
   "description": "cascade studio customized for local IDE dev",
   "scripts": {
     "start": "webpack-dev-server",
-    "prebuild": "rimraf ./dist",
     "build": "webpack --mode=production"
   },
   "author": "",
