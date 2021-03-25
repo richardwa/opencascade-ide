@@ -1,14 +1,18 @@
+/// <reference path="../types/opencascade.d.ts" />
+
 import {
   Color,
   Mesh,
   MeshStandardMaterial,
-  Group
+  Group,
+  Scene
 } from 'three';
-import { initOpenCascade } from "opencascade.js";
-import { makeBottle, loadSTEPorIGES, setupThreeJSViewport } from '../lib/library';
-import visualize from '../lib/visualize'
+import { initOpenCascade, OpenCascade, TopoDS_Shape } from "opencascade.js";
+import { setupThreeJSViewport } from './lib/three-util';
+import visualize from './lib/visualize';
+import { makeBottle } from './bottle';
 
-const addShapeToScene = async (openCascade, shape, scene) => {
+const addShapeToScene = async (openCascade: OpenCascade, shape: TopoDS_Shape, scene: Scene) => {
   const objectMat = new MeshStandardMaterial({
     color: new Color(0.9, 0.9, 0.9)
   });
@@ -28,9 +32,7 @@ const addShapeToScene = async (openCascade, shape, scene) => {
 const scene = setupThreeJSViewport();
 
 initOpenCascade().then(oc => oc.ready).then(openCascade => {
-
   let width = 50, height = 70, thickness = 30;
   let bottle = makeBottle(openCascade, width, height, thickness);
   addShapeToScene(openCascade, bottle, scene);
-
 });
