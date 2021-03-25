@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   entry: "./client/index.js",
@@ -18,6 +19,11 @@ module.exports = {
       }
     ]
   },
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: 'client/index.html',
+    })
+  ],
   node: {
     fs: "empty"
   }
