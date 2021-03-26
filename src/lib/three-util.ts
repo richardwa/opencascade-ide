@@ -13,17 +13,33 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { openCascadeHelper } from './opencascade-util';
 
+export const stats = {
+  frameCount: [0],
+}
+setInterval(() => {
+  stats.frameCount.push(0);
+}, 1000);
 
 
 export const setupThreeJSViewport = () => {
-  var scene = new Scene();
-  var camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const scene = new Scene();
 
-  var renderer = new WebGLRenderer({ antialias: true });
+  const renderer = new WebGLRenderer({ antialias: true });
   const viewport = document.getElementById("viewport");
   const viewportRect = viewport.getBoundingClientRect();
   renderer.setSize(viewportRect.width, viewportRect.height);
   viewport.appendChild(renderer.domElement);
+  const camera = new PerspectiveCamera(75, viewportRect.width / viewportRect.height, 0.1, 1000);
+
+
+  window.addEventListener('resize', () => {
+    const viewportRect = viewport.getBoundingClientRect();
+    const x = viewportRect.width;
+    const y = viewportRect.height;
+    camera.aspect = x / y;
+    camera.updateProjectionMatrix();
+    renderer.setSize(x, y);
+  });
 
   const light = new AmbientLight(0x404040);
   scene.add(light);
@@ -40,6 +56,7 @@ export const setupThreeJSViewport = () => {
 
   function animate() {
     requestAnimationFrame(animate);
+    stats.frameCount[stats.frameCount.length - 1]++;
     renderer.render(scene, camera);
   }
   animate();
@@ -47,12 +64,11 @@ export const setupThreeJSViewport = () => {
 }
 
 
-export const addShapeToScene = async (openCascade: OpenCascade, shape: TopoDS_Shape, scene: Scene) => {
-  openCascadeHelper.setOpenCascade(openCascade);
-  const facelist = await openCascadeHelper.tessellate(shape);
-  const [locVertexcoord, locNormalcoord, locTriIndices] = await openCascadeHelper.joinPrimitives(facelist);
+export const addShapeToScene = (shape: TopoDS_Shape, scene: Scene) => {
+  const facelist = openCascadeHelper.tessellate(shape);
+  const [locVertexcoord, locNormalcoord, locTriIndices] =  openCascadeHelper.joinPrimitives(facelist);
   const tot_triangle_count = facelist.reduce((a, b) => a + b.number_of_triangles, 0);
-  const [vertices, faces] = await openCascadeHelper.generateGeometry(tot_triangle_count, locVertexcoord, locNormalcoord, locTriIndices);
+  const [vertices, faces] = openCascadeHelper.generateGeometry(tot_triangle_count, locVertexcoord, locNormalcoord, locTriIndices);
 
   const objectMat = new MeshStandardMaterial({
     color: new Color(0.9, 0.9, 0.9)

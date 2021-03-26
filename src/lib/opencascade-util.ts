@@ -1,21 +1,33 @@
-import { OpenCascade, TopoDS_Shape } from 'opencascade.js';
+import { OpenCascade, TopoDS_Shape, initOpenCascade } from 'opencascade.js';
 import {
   Face3,
   Vector3
 } from 'three';
 
+type Goemetry = {
+  vertices: Float32Array;
+  normals: Float32Array;
+  indices: Uint32Array | Uint16Array;
+}
+export let openCascade: OpenCascade = null;
+
+console.time('wasm load');
+export const openCascadePromise = initOpenCascade().then(oc => {
+  console.timeEnd('wasm load');
+  openCascade = oc;
+  return oc.ready;
+});
+
+
 export const openCascadeHelper = {
-  setOpenCascade(openCascade: OpenCascade) {
-    this.openCascade = openCascade;
-  },
   tessellate(shape: TopoDS_Shape) {
     const facelist = [];
-    new this.openCascade.BRepMesh_IncrementalMesh_2(shape, 0.1, false, 0.5, false);
-    const ExpFace = new this.openCascade.TopExp_Explorer_1();
-    for (ExpFace.Init(shape, this.openCascade.TopAbs_ShapeEnum.TopAbs_FACE, this.openCascade.TopAbs_ShapeEnum.TopAbs_SHAPE); ExpFace.More(); ExpFace.Next()) {
-      const myFace = this.openCascade.TopoDS.Face_1(ExpFace.Current());
-      const aLocation = new this.openCascade.TopLoc_Location_1();
-      const myT = this.openCascade.BRep_Tool.Triangulation(myFace, aLocation);
+    new openCascade.BRepMesh_IncrementalMesh_2(shape, 0.1, false, 0.5, false);
+    const ExpFace = new openCascade.TopExp_Explorer_1();
+    for (ExpFace.Init(shape, openCascade.TopAbs_ShapeEnum.TopAbs_FACE, openCascade.TopAbs_ShapeEnum.TopAbs_SHAPE); ExpFace.More(); ExpFace.Next()) {
+      const myFace = openCascade.TopoDS.Face_1(ExpFace.Current());
+      const aLocation = new openCascade.TopLoc_Location_1();
+      const myT = openCascade.BRep_Tool.Triangulation(myFace, aLocation);
       if (myT.IsNull()) {
         continue;
       }
@@ -27,7 +39,7 @@ export const openCascadeHelper = {
         number_of_triangles: 0,
       };
 
-      const pc = new this.openCascade.Poly_Connect_2(myT);
+      const pc = new openCascade.Poly_Connect_2(myT);
       const Nodes = myT.get().Nodes();
 
       // write vertex buffer
@@ -40,8 +52,8 @@ export const openCascadeHelper = {
       }
 
       // write normal buffer
-      const myNormal = new this.openCascade.TColgp_Array1OfDir_2(Nodes.Lower(), Nodes.Upper());
-      this.openCascade.StdPrs_ToolTriangulatedShape.Normal(myFace, pc, myNormal);
+      const myNormal = new openCascade.TColgp_Array1OfDir_2(Nodes.Lower(), Nodes.Upper());
+      openCascade.StdPrs_ToolTriangulatedShape.Normal(myFace, pc, myNormal);
       this_face.normal_coord = new Array(myNormal.Length() * 3);
       for (let i = myNormal.Lower(); i <= myNormal.Upper(); i++) {
         const d = myNormal.Value(i).Transformed(aLocation.Transformation());
@@ -64,7 +76,7 @@ export const openCascadeHelper = {
         let n1 = t.Value(1);
         let n2 = t.Value(2);
         let n3 = t.Value(3);
-        if (orient !== this.openCascade.TopAbs_Orientation.TopAbs_FORWARD) {
+        if (orient !== openCascade.TopAbs_Orientation.TopAbs_FORWARD) {
           let tmp = n1;
           n1 = n2;
           n2 = tmp;
@@ -176,5 +188,115 @@ export const openCascadeHelper = {
       );
     }
     return [vertices, faces];
+  },
+  visualize(shape: TopoDS_Shape) {
+    const geometries: Goemetry[] = [];
+    const ExpFace = new openCascade.TopExp_Explorer_1();
+    for (ExpFace.Init(shape, openCascade.TopAbs_ShapeEnum.TopAbs_FACE, openCascade.TopAbs_ShapeEnum.TopAbs_SHAPE); ExpFace.More(); ExpFace.Next()) {
+      const myShape = ExpFace.Current()
+      const myFace = openCascade.TopoDS.Face_1(myShape);
+      let inc
+      try {
+        //in case some of the faces can not been visualized
+        inc = new openCascade.BRepMesh_IncrementalMesh_2(myFace, 0.1, false, 0.5, false);
+      } catch (e) {
+        console.error('face visualizi<ng failed')
+        continue
+      }
+
+      const aLocation = new openCascade.TopLoc_Location_1();
+      const myT = openCascade.BRep_Tool.Triangulation(myFace, aLocation);
+      if (myT.IsNull()) {
+        continue;
+      }
+
+
+      const pc = new openCascade.Poly_Connect_2(myT);
+      const Nodes = myT.get().Nodes()
+
+      let vertices = new Float32Array(Nodes.Length() * 3)
+
+      // write vertex buffer
+      for (let i = Nodes.Lower(); i <= Nodes.Upper(); i++) {
+        const t1 = aLocation.Transformation()
+        const p = Nodes.Value(i)
+        const p1 = p.Transformed(t1);
+        vertices[3 * (i - 1)] = p.X()
+        vertices[3 * (i - 1) + 1] = p.Y()
+        vertices[3 * (i - 1) + 2] = p.Z()
+        p.delete()
+        t1.delete()
+        p1.delete()
+      }
+      // write normal buffer
+      //
+
+
+      const myNormal = new openCascade.TColgp_Array1OfDir_2(Nodes.Lower(), Nodes.Upper());
+      openCascade.StdPrs_ToolTriangulatedShape.Normal(myFace, pc, myNormal);
+
+      let normals = new Float32Array(myNormal.Length() * 3)
+      for (let i = myNormal.Lower(); i <= myNormal.Upper(); i++) {
+        const t1 = aLocation.Transformation()
+        const d1 = myNormal.Value(i)
+        const d = d1.Transformed(t1);
+
+        normals[3 * (i - 1)] = d.X();
+        normals[3 * (i - 1) + 1] = d.Y();
+        normals[3 * (i - 1) + 2] = d.Z();
+
+        t1.delete()
+        d1.delete()
+        d.delete()
+      }
+
+      myNormal.delete()
+
+      // write triangle buffer
+      const orient = myFace.Orientation_1();
+      const triangles = myT.get().Triangles();
+
+
+      let indices
+      let triLength = triangles.Length() * 3
+      if (triLength > 65535)
+        indices = new Uint32Array(triLength)
+      else
+        indices = new Uint16Array(triLength)
+
+      for (let nt = 1; nt <= myT.get().NbTriangles(); nt++) {
+        const t = triangles.Value(nt);
+        let n1 = t.Value(1);
+        let n2 = t.Value(2);
+        let n3 = t.Value(3);
+        if (orient !== openCascade.TopAbs_Orientation.TopAbs_FORWARD) {
+          let tmp = n1;
+          n1 = n2;
+          n2 = tmp;
+        }
+
+        indices[3 * (nt - 1)] = n1 - 1
+        indices[3 * (nt - 1) + 1] = n2 - 1
+        indices[3 * (nt - 1) + 2] = n3 - 1
+        t.delete()
+      }
+      //orient.delete()
+      triangles.delete()
+
+      geometries.push({
+        vertices, normals, indices
+      });
+
+      Nodes.delete()
+      pc.delete()
+      aLocation.delete()
+      myT.delete()
+      inc.delete()
+      myFace.delete()
+      myShape.delete()
+    }
+    ExpFace.delete()
+    return geometries;
   }
+
 }
