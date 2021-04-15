@@ -1,8 +1,8 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { addShapeToScene } from './src/viewer';
-import { makeBottle } from './src/bottle';
-import { stats } from './src/lib/three-util'
+import { addShapeToScene } from './ui/viewer';
+import { makeBottle } from './ui/sample-obj';
+import { stats } from './lib/three-util'
 
 type State = {
   fps: number;

@@ -1,4 +1,4 @@
-import { openCascadePromise } from "./lib/opencascade-util";
+import { openCascadePromise } from "../lib/opencascade-util";
 
 export const makeBottle = (myWidth: number, myHeight: number, myThickness: number) => {
   return openCascadePromise.then(openCascade => {

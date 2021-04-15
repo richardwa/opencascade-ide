@@ -1,5 +1,3 @@
-/// <reference path="../types/opencascade.d.ts" />
-
 import {
   Color,
   Mesh,
@@ -10,8 +8,8 @@ import {
   BufferAttribute
 } from 'three';
 import { TopoDS_Shape } from "opencascade.js";
-import { openCascadeHelper } from './lib/opencascade-util';
-import { setupThreeJSViewport } from './lib/three-util';
+import { openCascadeHelper } from '../lib/opencascade-util';
+import { setupThreeJSViewport } from '../lib/three-util';
 
 
 export const scene = setupThreeJSViewport();

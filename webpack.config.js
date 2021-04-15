@@ -1,9 +1,8 @@
 const path = require('path');
-const fs = require('fs');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-  entry: "./index.tsx",
+  entry: "./src/index.tsx",
   devtool: 'inline-source-map',
   devServer: {
     contentBase: path.join(__dirname, './dist'),
@@ -30,7 +29,7 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: "./index.html"
+      template: "./src/index.html"
     })
   ],
   node: {
